@@ -42,7 +42,7 @@ var run = function () {
                   logger.debug('Opened: ' + post.attributes.href);
                   logger.addLiked(post.attributes.href);
 
-                  casper.wait(300, function () {
+                  casper.wait(500, function () {
                     if (!casper.exists('.coreSpriteHeartOpen')) return;
 
                     casper.click('.coreSpriteHeartOpen');
