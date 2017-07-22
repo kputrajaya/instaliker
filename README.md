@@ -2,22 +2,23 @@
 
 Below is the step by step guide to get it running.
 
-```
-# install project requirements
-$ npm install
-```
+1. Install [NodeJS](https://nodejs.org/en/download/)
 
-```
-# copy the config template
-$ cp config.example.js config.js
-```
+2. Install [PhantomJS](http://phantomjs.org/download.html)
 
-```
-# do necessary changes, like providing your account credentials
-vim config.js
-```
+3. Install project packages
+    ```
+    $ npm i
+    ```
 
-```
-# run the service
-node_modules/casperjs/bin/casperjs index.js
-```
+4. Copy config file
+    ```
+    $ cp config.example.js config.js
+    ```
+
+5. Update config and provide credentials
+
+6. Run script
+    ```
+    $ node_modules/casperjs/bin/casperjs index.js
+    ```
