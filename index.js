@@ -1,82 +1,107 @@
 var config = require('./config');
-var logger = require('./logger')(config.action.username);
+var fs = require('fs');
+var webpage = require('webpage');
 var casper = require('casper').create(config.casper);
 
 var run = function () {
+  var username = casper.cli.get(0);
+  var action = config.actions[username];
+  if (!action) {
+    console.log('User is not configured');
+    casper.exit();
+    return;
+  }
+
   var baseUrl = 'https://www.instagram.com';
-  var likedCount = 0;
-  var commentedCount = 0;
+  var logFile = 'logs/' + username + '-liked.log';
 
-  casper.start(baseUrl, function () {
-    logger.debug('Start: Homepage');
-    casper.waitForText('Log in');
-  });
+  var util = {
+    getLiked: function () {
+      var fileSize = fs.isFile(logFile) ? fs.size(logFile) : 0;
+      var limit = 1048576; // 1 MB
+      if (fileSize > limit) {
+        this.debug('Maintenance: Removing "' + logFile + '" due to size limit');
+        fs.remove(logFile);
+      }
 
-  casper.then(function () {
-    casper.clickLabel('Log in', 'a');
-    casper.fill('form', {
-      username: config.action.username,
-      password: config.action.password
-    }, true);
+      return fs.isReadable(logFile) ? fs.read(logFile).split("\n") : [];
+    },
+    addLiked: function (message) {
+      fs.write(logFile, message + "\n", 'a');
+    },
+    getPosts: function (hashtags, callback) {
+      var posts = [];
+      var countdown = hashtags.length;
+      var regex = /"code": "([\w-_]+)"/g;
+      var matches;
 
-    logger.debug('Start: Logging in');
-    casper.waitForSelector('html.logged-in');
-  });
+      hashtags.forEach(function (hashtag) {
+        var page = webpage.create();
+        page.open(baseUrl + '/explore/tags/' + hashtag, function (status) {
+          while (!!(matches = regex.exec(page.content))) {
+            posts.push(matches[1]);
+          }
 
-  casper.then(function () {
-    casper.each(config.action.hashtags, function (self, hashtag) {
-      casper.thenOpen(baseUrl + '/explore/tags/' + hashtag.tag + '/', function () {
-        logger.debug('Hashtag: ' + hashtag.tag);
-        casper.waitForSelector('a[href^="/p/"]');
+          if (--countdown === 0) {
+            callback(posts);
+          }
+        });
+      });
+    },
+    random: function (delay) {
+      var min = delay[0];
+      var max = delay[1];
+      return Math.round(Math.random() * (max - min)) + min;
+    }
+  };
 
-        casper.then(function () {
-          var posts = casper.getElementsInfo('a[href^="/p/"]');
-          casper.each(posts, function (self, post) {
-            if (hashtag.like) {
-              if (logger.getLiked().indexOf(post.attributes.href) >= 0) {
-                // already liked, based on log
-                logger.debug('Skipped: ' + post.attributes.href);
-              } else {
-                // open page then like
-                casper.thenOpen(baseUrl + post.attributes.href, function () {
-                  logger.debug('Opened: ' + post.attributes.href);
-                  logger.addLiked(post.attributes.href);
+  util.getPosts(action.hashtags, function (posts) {
+    // filter posts
+    var liked = util.getLiked();
+    var filteredPosts = [];
+    console.log('Fetched: ' + posts.length + ' posts');
+    posts.forEach(function (post) {
+      if (liked.indexOf(post) === -1) {
+        filteredPosts.push(post);
+      }
+    });
+    console.log('Filtered: ' + filteredPosts.length + ' posts');
 
-                  casper.wait(500, function () {
-                    if (!casper.exists('.coreSpriteHeartOpen')) return;
+    // open homepage
+    casper.start(baseUrl, function () {
+      console.log('Start: Homepage');
+      casper.waitForText('Log in');
+    });
 
-                    casper.click('.coreSpriteHeartOpen');
-                    logger.debug('Liked: ' + post.attributes.href);
-                    likedCount++;
-                  });
-                });
+    // log in
+    casper.then(function () {
+      console.log('Start: Logging in');
+      casper.clickLabel('Log in', 'a');
+      casper.fill('form', {username: username, password: action.password}, true);
+      casper.waitForSelector('html.logged-in');
+    });
+
+    // open and like posts
+    casper.then(function () {
+      casper.each(filteredPosts, function (self, post) {
+        casper.wait(util.random(config.delay), function () {
+          casper.thenOpen(baseUrl + '/p/' + post + '/', function () {
+            console.log('Opened: ' + post);
+            util.addLiked(post);
+
+            casper.wait(500, function () {
+              if (casper.exists('.coreSpriteHeartOpen')) {
+                casper.click('.coreSpriteHeartOpen');
+                console.log('Liked: ' + post);
               }
-            }
-            if (hashtag.comment) {
-              // comment
-            }
+            });
           });
         });
       });
     });
-  });
 
-  casper.then(function () {
-    logger.debug('Finish: Liked ' + likedCount + ', commented ' + commentedCount);
+    casper.run();
   });
-
-  casper.run();
 };
 
-if (
-  config.action &&
-  config.action.username &&
-  config.action.password &&
-  config.action.hashtags
-) {
-  logger.checkLiked();
-  run();
-} else {
-  logger.debug('Arguments not complete');
-  casper.exit();
-}
+run();
