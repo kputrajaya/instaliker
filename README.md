@@ -1,6 +1,13 @@
 # Instaliker
 
-Below is the step by step guide to get it running.
+Automatically like Instagram posts based on configured tags. 
+
+## Built With
+
+- [CasperJS](https://www.casperjs.org/)
+- [Request](https://github.com/request/request)
+
+## Installation
 
 1. Install [NodeJS](https://nodejs.org/en/download/)
 
