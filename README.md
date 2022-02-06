@@ -9,23 +9,21 @@ Automatically like Instagram posts based on configured tags.
 
 ## Installation
 
-1. Install [NodeJS](https://nodejs.org/en/download/)
+1. Install [NodeJS](https://nodejs.org/en/download/) and [PhantomJS](http://phantomjs.org/download.html)
 
-2. Install [PhantomJS](http://phantomjs.org/download.html)
-
-3. Install project packages
+2. Install project packages
     ```
     $ npm i
     ```
-
-4. Copy config file
+    
+3. Copy config file
     ```
     $ cp config.example.js config.js
     ```
+    
+4. Update config and provide credentials
 
-5. Update config and provide credentials
-
-6. Run script
+5. Run script
     ```
     $ node_modules/casperjs/bin/casperjs index.js
     ```
